@@ -1,15 +1,20 @@
-use std::fmt::Display;
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-use std::time::Duration;
-
 use clap::{Parser, ValueEnum};
+use futures_util::StreamExt;
+use reqwest;
 use shellexpand::tilde;
+use std::{
+    fmt::Display,
+    path::PathBuf,
+    str::FromStr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 use tokio::{
+    fs::File,
+    io::AsyncWriteExt,
     process::Command,
     select, signal,
     sync::{mpsc, Notify},
@@ -383,25 +388,20 @@ async fn generate_imatrix(
     verbose: bool,
     cancel_rx: Arc<Notify>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if verbose {
-        println!("🌐 downloading calibration dataset...");
-    }
-    let mut download = Command::new("wget")
-        .arg("https://github.com/ggerganov/llama.cpp/files/14194570/groups_merged.txt")
-        .spawn()?;
-    select! {
-        status = download.wait() => {
-            status?;
+    if !tokio::fs::try_exists("calibration_data.txt").await? {
+        if verbose {
+            println!("🌐 downloading calibration dataset...");
         }
-        _ = cancel_rx.notified() => {
-            download.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 calibration dataset download process killed due to interrupt");
-            }
-            return Err("Download process killed due to interrupt".into());
+        let mut byte_stream =
+            reqwest::get("https://github.com/ggerganov/llama.cpp/files/14194570/groups_merged.txt")
+                .await?
+                .bytes_stream();
+        let mut f = File::create("calibration_data.txt").await?;
+        while let Some(bytes) = byte_stream.next().await {
+            f.write_all(&bytes?).await?;
         }
-    }
+        f.flush().await?;
+    };
     if verbose {
         println!("⚖️ generating imatrix for {model_name}...");
     }
@@ -409,7 +409,7 @@ async fn generate_imatrix(
         .arg("-m")
         .arg(fp)
         .arg("-f")
-        .arg("groups_merged.txt")
+        .arg("calibration_data.txt")
         .arg("-o")
         .arg(output_path)
         .arg("-t")
@@ -435,20 +435,7 @@ async fn generate_imatrix(
     if verbose {
         println!("🧹 cleaning up caliration dataset...");
     }
-    let mut cleanup = Command::new("rm").arg("groups_merged.txt").spawn()?;
-    select! {
-        status = cleanup.wait() => {
-            status?;
-        }
-        _ = cancel_rx.notified() => {
-            cleanup.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 calibration dataset cleanup process killed due to interrupt");
-            }
-            return Err("calibration dataset cleanup process killed due to interrupt".into());
-        }
-    }
+    tokio::fs::remove_file("calibration_data.txt").await?;
     Ok(())
 }
 
