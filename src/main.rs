@@ -1,6 +1,5 @@
 use clap::{Parser, ValueEnum};
 use futures_util::StreamExt;
-use reqwest;
 use shellexpand::tilde;
 use std::{
     fmt::Display,
@@ -205,9 +204,6 @@ async fn update_llama_cpp(
             }
             _ = cancel_rx.notified() => {
                 clone.kill().await?;
-                if verbose {
-                    println!("🛑 Llama.cpp installation process cancelled");
-                }
                 return Err("Llama.cpp installation process cancelled".into());
             }
         }
@@ -226,9 +222,6 @@ async fn update_llama_cpp(
         }
         _ = cancel_rx.notified() => {
             pull.kill().await?;
-            if verbose {
-                println!("🛑 Llama.cpp update process cancelled");
-            }
             return Err("Llama.cpp update process cancelled".into());
         }
     }
@@ -243,9 +236,6 @@ async fn update_llama_cpp(
         }
         _ = cancel_rx.notified() => {
             clean.kill().await?;
-            if verbose {
-                println!("🛑 Llama.cpp build clean process cancelled");
-            }
             return Err("Llama.cpp build clean process cancelled".into());
         }
     }
@@ -257,9 +247,6 @@ async fn update_llama_cpp(
         }
         _ = cancel_rx.notified() => {
             make.kill().await?;
-            if verbose {
-                println!("🛑 Llama.cpp build process cancelled");
-            }
             return Err("Llama.cpp build process cancelled".into());
         }
     }
@@ -281,9 +268,6 @@ async fn update_llama_cpp(
         }
         _ = cancel_rx.notified() => {
             deps.kill().await?;
-            if verbose {
-                println!("🛑 Llama.cpp build process cancelled");
-            }
             return Err("Llama.cpp build process cancelled".into());
         }
     }
@@ -326,10 +310,6 @@ async fn download_model(
         }
         _ = cancel_rx.notified() => {
             download_task.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 Download process killed due to interrupt");
-            }
             Err("Download process killed due to interrupt".into())
         }
     }
@@ -355,29 +335,31 @@ async fn convert_fp(
         .arg("--outtype")
         .arg(precision.to_string())
         .arg("--outfile")
-        .arg(output_path)
+        .arg(&output_path)
         .spawn()?;
     select! {
         status = convert_fp_task.wait() => {
             status?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!(
-                    "🪄 {model_name} conversion to {} complete!",
-                    precision.to_string().to_uppercase()
-                );
-            }
-            Ok(())
         }
         _ = cancel_rx.notified() => {
             convert_fp_task.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 Conversion process killed due to interrupt");
-            }
-            Err("Conversion process killed due to interrupt".into())
+            return Err("Conversion process killed due to interrupt".into());
         }
     }
+
+    if !tokio::fs::try_exists(output_path).await? {
+        return Err("💥 Conversion failed".into());
+    };
+
+    if verbose {
+        // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
+        println!(
+            "🪄 {model_name} conversion to {} complete!",
+            precision.to_string().to_uppercase()
+        );
+    }
+
+    Ok(())
 }
 
 async fn generate_imatrix(
@@ -425,10 +407,6 @@ async fn generate_imatrix(
         }
         _ = cancel_rx.notified() => {
             imatrix_task.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 imatrix generation process killed due to interrupt");
-            }
             return Err("imatrix generation process killed due to interrupt".into());
         }
     }
@@ -480,10 +458,6 @@ async fn quantize(
         }
         _ = cancel_rx.notified() => {
             quantize.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 Quantization process killed due to interrupt");
-            }
             return Err("Quantization process killed due to interrupt".into());
         }
     }
@@ -499,10 +473,6 @@ async fn quantize(
         }
         _ = cancel_rx.notified() => {
             moov.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 Quantized file rename process killed due to interrupt");
-            }
             return Err("Quantized file rename process killed due to interrupt".into());
         }
     }
@@ -514,7 +484,6 @@ async fn create_hf_repo(
     hf_user: String,
     hf_token: String,
     model_name: &str,
-    verbose: bool,
     cancel_rx: Arc<Notify>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let repo_name = format!("{model_name}-GGUF");
@@ -533,10 +502,6 @@ async fn create_hf_repo(
         }
         _ = cancel_rx.notified() => {
             repo_create.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 Create HF repo process killed due to interrupt");
-            }
             return Err("Create HF repo process killed due to interrupt".into());
         }
     }
@@ -578,10 +543,6 @@ async fn upload_ggufs_to_hf(
         }
         _ = cancel_rx.notified() => {
             upload.kill().await?;
-            if verbose {
-                // teeeeeeeechnically this is new and missing from the og autogguf[.py].....
-                println!("🛑 Upload process killed due to interrupt");
-            }
             return Err("Upload process killed due to interrupt".into());
         }
     }
@@ -602,7 +563,6 @@ async fn upload_worker(
         hf_user.clone(),
         hf_token.clone(),
         &model_name,
-        verbose,
         cancel_rx.clone(),
     )
     .await?;
