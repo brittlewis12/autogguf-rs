@@ -480,35 +480,6 @@ async fn quantize(
     Ok(())
 }
 
-async fn create_hf_repo(
-    hf_user: String,
-    hf_token: String,
-    model_name: &str,
-    cancel_rx: Arc<Notify>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let repo_name = format!("{model_name}-GGUF");
-    let mut repo_create = Command::new("huggingface-cli")
-        .env("HF_USER", hf_user)
-        .env("HF_TOKEN", hf_token)
-        .arg("repo")
-        .arg("create")
-        .arg(repo_name)
-        .arg("-y")
-        .spawn()?;
-
-    select! {
-        status = repo_create.wait() => {
-            status?;
-        }
-        _ = cancel_rx.notified() => {
-            repo_create.kill().await?;
-            return Err("Create HF repo process killed due to interrupt".into());
-        }
-    }
-
-    Ok(())
-}
-
 async fn upload_ggufs_to_hf(
     hf_user: String,
     hf_token: String,
@@ -559,14 +530,6 @@ async fn upload_worker(
     model_name: String,
     cancel_rx: Arc<Notify>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    create_hf_repo(
-        hf_user.clone(),
-        hf_token.clone(),
-        &model_name,
-        cancel_rx.clone(),
-    )
-    .await?;
-
     while receiver.recv().await.is_some() {
         if !busy.swap(true, Ordering::Acquire) {
             upload_ggufs_to_hf(
