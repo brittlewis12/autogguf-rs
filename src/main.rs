@@ -61,7 +61,7 @@ struct Args {
     /// Skip uploading converted files to HuggingFace Hub.
     skip_upload: bool,
 
-    #[clap(long)]
+    #[clap(long, conflicts_with = "skip_upload")]
     /// Upload .gguf files in the target model directory to HuggingFace Hub.
     only_upload: bool,
 
@@ -73,12 +73,12 @@ struct Args {
     /// The path to the llama.cpp repo.
     llama_path: String,
 
-    #[clap(long)]
-    /// Your HuggingFace API token for uploading converted models. Reads from `$HF_TOKEN` by default.
+    #[clap(long, env = "HF_TOKEN", hide_env_values = true)]
+    /// Your HuggingFace API token for uploading converted models.
     hf_token: Option<String>,
 
-    #[clap(long)]
-    /// Your HuggingFace username for uploading converted models. Reads from `$HF_USER` by default.
+    #[clap(long, env = "HF_USER")]
+    /// Your HuggingFace username for uploading converted models.
     hf_user: Option<String>,
 }
 
@@ -640,11 +640,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hf_user = args
         .hf_user
         .clone()
-        .unwrap_or_else(|| std::env::var("HF_USER").unwrap_or_default());
+        .unwrap_or_default();
     let hf_token = args
         .hf_token
         .clone()
-        .unwrap_or_else(|| std::env::var("HF_TOKEN").unwrap_or_default());
+        .unwrap_or_default();
 
     let (upload_tx, upload_rx) = mpsc::channel(10);
     let busy = Arc::new(AtomicBool::new(false));
@@ -700,4 +700,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🎉 done!");
 
     Ok(())
+}
+
+#[test]
+fn verify_clap_cli() {
+    use clap::CommandFactory;
+    Args::command().debug_assert();
 }
