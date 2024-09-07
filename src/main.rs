@@ -62,7 +62,7 @@ struct Args {
     skip_upload: bool,
 
     #[clap(long)]
-    /// Upload the .gguf files in the target model directory to HuggingFace Hub.
+    /// Upload .gguf files in the target model directory to HuggingFace Hub.
     only_upload: bool,
 
     #[clap(short, long)]
