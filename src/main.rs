@@ -652,6 +652,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )));
     }
 
+    let n_quants = args.quants.len();
+
     if !args.only_upload {
         for q in args.quants {
             quantize(
@@ -675,7 +677,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         while busy.load(Ordering::Acquire) {
             sleep(Duration::from_millis(100)).await;
         }
-        upload_tx.send(()).await?;
+        if n_quants > 1 {
+            // NOTE: given eager uploading, ensure all quants uploaded if multiple were quantized
+            upload_tx.send(()).await?;
+        }
     }
     drop(upload_tx);
     if let Some(handle) = upload_handle {
