@@ -633,14 +633,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     }
 
-    let hf_user = args
-        .hf_user
-        .clone()
-        .unwrap_or_default();
-    let hf_token = args
-        .hf_token
-        .clone()
-        .unwrap_or_default();
+    let hf_user = args.hf_user.clone().unwrap_or_default();
+    let hf_token = args.hf_token.clone().unwrap_or_default();
 
     let (upload_tx, upload_rx) = mpsc::channel(10);
     let busy = Arc::new(AtomicBool::new(false));
