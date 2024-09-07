@@ -113,7 +113,7 @@ macro_rules! quant_level_enum {
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 match s.to_lowercase().as_str() {
                     $($str => Ok(QuantLevel::$variant),)*
-                    _ => Err(format!("'{}' is not a valid quant level", s)),
+                    _ => Err(format!("'{s}' is not a valid quant level")),
                 }
             }
         }
@@ -123,7 +123,7 @@ macro_rules! quant_level_enum {
                 let label = match self {
                     $(QuantLevel::$variant => $str,)*
                 };
-                write!(f, "{}", label)
+                write!(f, "{label}")
             }
         }
     };
@@ -581,9 +581,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let override_fp = args.fp.is_some();
     if args.skip_download || override_fp || args.only_upload {
-        // if args.verbose { // ?
         println!("🤗 skipping download from HuggingFace Hub.");
-        // }
     } else {
         download_model(&args.model_id, &model_name, args.verbose, notify.clone()).await?;
     }
@@ -598,12 +596,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ))
     };
     if override_fp || args.only_upload {
-        // if args.verbose { // ?
         println!(
             "skipping {} conversion.",
             precision.to_string().to_uppercase()
         );
-        // }
     } else {
         convert_fp(
             precision,
