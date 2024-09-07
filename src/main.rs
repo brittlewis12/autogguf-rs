@@ -27,7 +27,7 @@ struct Args {
     /// The HuggingFace model ID to convert. Required.
     model_id: String,
 
-    /// Comma-separated list of quant levels to convert. Defaults to all non-imatrix k-quants and 8_0.
+    /// Comma-separated list of quant levels to convert. Defaults to all non-imatrix quants.
     #[clap(
         short,
         long,
@@ -46,7 +46,7 @@ struct Args {
     full_precision: Precision,
 
     #[clap(long)]
-    /// Path to fp16, bf16 or fp32 GGUF file for quantization. Implies skipping download and initial conversion to FP16.
+    /// Path to fp16, bf16 or fp32 GGUF file for quantization. Implies skipping download and initial conversion to full precision GGUF.
     fp: Option<String>,
 
     #[clap(long)]
@@ -62,14 +62,14 @@ struct Args {
     skip_upload: bool,
 
     #[clap(long)]
-    /// Upload the .gguf files in the current directory to HuggingFace Hub.
+    /// Upload the .gguf files in the target model directory to HuggingFace Hub.
     only_upload: bool,
 
     #[clap(short, long)]
     /// Update the llama.cpp repo before converting. Installs llama.cpp if llama-path doesn’t exist.
     update_llama: bool,
 
-    #[clap(long, default_value = "~/code/llama.cpp")]
+    #[clap(short, long, default_value = "~/code/llama.cpp")]
     /// The path to the llama.cpp repo.
     llama_path: String,
 
