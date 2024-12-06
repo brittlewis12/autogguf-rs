@@ -1,7 +1,13 @@
 [package]
 name = "autogguf"
-description = "Convert HuggingFace models to GGUF automatically."
 version = "0.1.0"
+description = "Convert HuggingFace models to GGUF automatically."
+authors = ["Britt Lewis <brittlewis12@gmail.com>"]
+license = "Unlicense OR MIT OR Apache-2.0"
+homepage = "https://github.com/brittlewis12/autogguf-rs"
+repository = "https://github.com/brittlewis12/autogguf-rs"
+keywords = ["huggingface", "gguf", "llama.cpp", "llm", "transformers"]
+categories = ["command-line-utilities"]
 edition = "2021"
 
 [dependencies]

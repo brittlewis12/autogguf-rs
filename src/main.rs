@@ -33,7 +33,7 @@ struct Args {
         long,
         value_delimiter = ',',
         num_args = 1..,
-        default_value = "q2_k,q3_k_s,q3_k_m,q3_k_l,q4_0,q4_1,q4_k_s,q4_k_m,q5_0,q5_1,q5_k_s,q5_k_m,q6_k,q8_0"
+        default_value = "q2_k,q3_k_s,q3_k_m,q3_k_l,q4_0,q4_0_4_4,q4_0_4_8,q4_0_8_8,q4_1,q4_k_s,q4_k_m,q5_0,q5_1,q5_k_s,q5_k_m,q6_k,q8_0"
     )]
     quants: Vec<QuantLevel>,
 
@@ -135,6 +135,9 @@ quant_level_enum! {
     Q3KM => "q3_k_m",
     Q3KL => "q3_k_l",
     Q4_0 => "q4_0",
+    Q4_0_4_4 => "q4_0_4_4",
+    Q4_0_4_8 => "q4_0_4_8",
+    Q4_0_8_8 => "q4_0_8_8",
     Q4_1 => "q4_1",
     Q4KS => "q4_k_s",
     Q4KM => "q4_k_m",
