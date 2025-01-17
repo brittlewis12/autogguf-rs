@@ -226,21 +226,30 @@ async fn update_llama_cpp(
         }
     }
 
-    let mut clean = Command::new("make")
-        .arg("clean")
+    let mut build = Command::new("cmake")
+        .arg("-B")
+        .arg("build")
         .current_dir(&llama_path)
         .spawn()?;
     select! {
-        status = clean.wait() => {
+        status = build.wait() => {
             status?;
         }
         _ = cancel_rx.notified() => {
-            clean.kill().await?;
-            return Err("Llama.cpp build clean process cancelled".into());
+            build.kill().await?;
+            return Err("Llama.cpp build process cancelled".into());
         }
     }
 
-    let mut make = Command::new("make").current_dir(&llama_path).spawn()?;
+    let mut make = Command::new("cmake")
+        .arg("--build")
+        .arg("build")
+        .arg("--config")
+        .arg("Release")
+        .arg("-j")
+        .arg("7")
+        .current_dir(&llama_path)
+        .spawn()?;
     select! {
         status = make.wait() => {
             status?;
@@ -387,7 +396,7 @@ async fn generate_imatrix(
     if verbose {
         println!("⚖️ generating imatrix for {model_name}...");
     }
-    let mut imatrix_task = Command::new(llama_path.join("llama-imatrix"))
+    let mut imatrix_task = Command::new(llama_path.join("build/bin/llama-imatrix"))
         .arg("-m")
         .arg(fp)
         .arg("-f")
@@ -448,7 +457,7 @@ async fn quantize(
         args.push(imatrix.to_string_lossy().to_string());
     }
     args.extend_from_slice(default_args.as_slice());
-    let mut quantize = Command::new(llama_path.join("llama-quantize"))
+    let mut quantize = Command::new(llama_path.join("build/bin/llama-quantize"))
         .args(args)
         .spawn()?;
 
