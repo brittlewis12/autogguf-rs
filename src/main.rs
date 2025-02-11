@@ -54,6 +54,10 @@ struct Args {
     imatrix: Option<String>,
 
     #[clap(long)]
+    /// Path to a json file with metadata to override the parsed model metadata.
+    metadata_override: Option<PathBuf>,
+
+    #[clap(long)]
     /// Skip downloading the model to convert from HuggingFace Hub.
     skip_download: bool,
 
@@ -329,6 +333,7 @@ async fn convert_fp(
     llama_path: PathBuf,
     output_path: PathBuf,
     model_name: &str,
+    metadata_override: Option<PathBuf>,
     verbose: bool,
     cancel_rx: Arc<Notify>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -338,14 +343,22 @@ async fn convert_fp(
             precision.to_string().to_uppercase()
         );
     }
-    let mut convert_fp_task = Command::new("python3")
-        .arg(llama_path.join("convert_hf_to_gguf.py"))
-        .arg(model_name)
-        .arg("--outtype")
-        .arg(precision.to_string())
-        .arg("--outfile")
-        .arg(&output_path)
-        .spawn()?;
+    let mut args = vec![
+        llama_path
+            .join("convert_hf_to_gguf.py")
+            .to_string_lossy()
+            .to_string(),
+        model_name.to_string(),
+        "--outtype".to_string(),
+        precision.to_string(),
+        "--outfile".to_string(),
+        output_path.to_string_lossy().to_string(),
+    ];
+    if let Some(metadata_override_path) = metadata_override {
+        args.push("--metadata".to_string());
+        args.push(metadata_override_path.to_string_lossy().to_string());
+    }
+    let mut convert_fp_task = Command::new("python3").args(args).spawn()?;
     select! {
         status = convert_fp_task.wait() => {
             status?;
@@ -615,6 +628,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             llama_path.clone(),
             fp.clone(),
             &model_name,
+            args.metadata_override,
             args.verbose,
             notify.clone(),
         )
