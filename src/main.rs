@@ -397,7 +397,7 @@ async fn generate_imatrix(
             println!("🌐 downloading calibration dataset...");
         }
         let mut byte_stream =
-            reqwest::get("https://github.com/ggerganov/llama.cpp/files/14194570/groups_merged.txt")
+            reqwest::get("https://github.com/ggml-org/llama.cpp/files/14194570/groups_merged.txt")
                 .await?
                 .bytes_stream();
         let mut f = File::create("calibration_data.txt").await?;
