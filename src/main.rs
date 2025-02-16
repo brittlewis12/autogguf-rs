@@ -199,7 +199,7 @@ async fn update_llama_cpp(
         }
         let mut clone = Command::new("git")
             .arg("clone")
-            .arg("https://github.com/ggerganov/llama.cpp")
+            .arg("https://github.com/ggml-org/llama.cpp")
             .arg(llama_path.clone())
             .spawn()?;
         select! {
