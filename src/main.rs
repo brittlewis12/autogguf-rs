@@ -105,7 +105,7 @@ impl Display for Precision {
 }
 
 macro_rules! quant_level_enum {
-    ($($variant:ident => $str:expr_2021),* $(,)?) => {
+    ($($variant:ident => $str:expr),* $(,)?) => {
         #[derive(Debug, Clone)]
         enum QuantLevel {
             $($variant),*
