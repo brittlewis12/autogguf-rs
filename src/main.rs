@@ -6,8 +6,8 @@ use std::{
     path::PathBuf,
     str::FromStr,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::Duration,
 };
@@ -16,7 +16,7 @@ use tokio::{
     io::AsyncWriteExt,
     process::Command,
     select, signal,
-    sync::{mpsc, Notify},
+    sync::{Notify, mpsc},
     task::JoinHandle,
     time::sleep,
 };
@@ -105,7 +105,7 @@ impl Display for Precision {
 }
 
 macro_rules! quant_level_enum {
-    ($($variant:ident => $str:expr),* $(,)?) => {
+    ($($variant:ident => $str:expr_2021),* $(,)?) => {
         #[derive(Debug, Clone)]
         enum QuantLevel {
             $($variant),*
