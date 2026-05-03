@@ -288,6 +288,32 @@ async fn update_llama_cpp(
     Ok(())
 }
 
+/// Resolve the Hugging Face Hub CLI binary name.
+///
+/// The official tool was renamed from `huggingface-cli` (deprecated) to
+/// `hf` in `huggingface_hub` >= 1.0. Prefer the new name; fall back to
+/// the legacy name for older environments. Return `Err` only if neither
+/// is on `PATH`.
+fn hf_cli_binary() -> Result<&'static str, Box<dyn std::error::Error>> {
+    use std::process::Command as StdCommand;
+    for candidate in ["hf", "huggingface-cli"] {
+        // `hf --help` and `huggingface-cli --help` both exit 0 when the
+        // tool is callable; if the binary is missing, `Command::status`
+        // returns Err(NotFound).
+        let ok = StdCommand::new(candidate)
+            .arg("--help")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if ok {
+            return Ok(candidate);
+        }
+    }
+    Err("Neither `hf` nor `huggingface-cli` is on PATH. Install with `pip install -U huggingface_hub`.".into())
+}
+
 async fn download_model(
     model_id: &str,
     model_name: &str,
@@ -312,7 +338,7 @@ async fn download_model(
     if !verbose {
         args.push("--quiet".to_string());
     }
-    let mut download_task = Command::new("huggingface-cli").args(args).spawn()?;
+    let mut download_task = Command::new(hf_cli_binary()?).args(args).spawn()?;
     select! {
         status = download_task.wait() => {
             status?;
@@ -515,7 +541,7 @@ async fn upload_ggufs_to_hf(
 
     let repo_name = format!("{model_name}-GGUF");
     let repo_id = format!("{hf_user}/{repo_name}");
-    let mut upload = Command::new("huggingface-cli")
+    let mut upload = Command::new(hf_cli_binary().map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.to_string().into() })?)
         .env("HF_USER", hf_user)
         .env("HF_TOKEN", hf_token)
         .arg("upload")
